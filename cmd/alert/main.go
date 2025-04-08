@@ -3,23 +3,26 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ses"
 )
 
 func main() {
-	// Get recipient email from environment variable
-	recipientEmail := os.Getenv("ALERT_EMAIL")
-	if recipientEmail == "" {
-		fmt.Println("Error: ALERT_EMAIL environment variable is not set")
+	// Get Telegram chat ID from environment variable
+	chatID := os.Getenv("ALERT_CHAT_ID")
+	if chatID == "" {
+		fmt.Println("Error: ALERT_CHAT_ID environment variable is not set")
 		os.Exit(1)
 	}
 
-	// Parse command line arguments
-	messagePtr := flag.String("message", "", "The message to send via email")
+	// Get Telegram bot token from environment variable
+	botToken := os.Getenv("ALERT_BOT_TOKEN")
+	if botToken == "" {
+		fmt.Println("Error: ALERT_BOT_TOKEN environment variable is not set")
+		os.Exit(1)
+	}
+
+	messagePtr := flag.String("message", "", "The message to send via Telegram")
 	flag.Parse()
 
 	if *messagePtr == "" {
@@ -27,36 +30,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create new AWS session
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+	// Send message via Telegram bot
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s",
+		botToken, chatID, *messagePtr)
 
-	// Create SES client
-	svc := ses.New(sess)
-
-	// Send email
-	_, err := svc.SendEmail(&ses.SendEmailInput{
-		Destination: &ses.Destination{
-			ToAddresses: []*string{aws.String(recipientEmail)},
-		},
-		Message: &ses.Message{
-			Body: &ses.Body{
-				Text: &ses.Content{
-					Data: aws.String(*messagePtr),
-				},
-			},
-			Subject: &ses.Content{
-				Data: aws.String("Alert Notification"),
-			},
-		},
-		Source: aws.String(recipientEmail), // Replace with a verified SES email if different
-	})
-
+	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error sending email:", err)
+		fmt.Println("Error sending Telegram message:", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("Error: Telegram API returned non-200 status:", resp.Status)
 		os.Exit(1)
 	}
 
-	fmt.Println("Email sent successfully to:", recipientEmail)
+	fmt.Println("Message sent successfully to Telegram")
 }
