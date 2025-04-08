@@ -11,8 +11,6 @@ import (
 )
 
 func main() {
-	fmt.Println("Alert service starting...")
-
 	// Get recipient email from environment variable
 	recipientEmail := os.Getenv("ALERT_EMAIL")
 	if recipientEmail == "" {
