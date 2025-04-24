@@ -1,7 +1,9 @@
 #!/bin/sh
 
-# Build the binary
-GOOS=linux GOARCH=arm go build -ldflags="-s -w" -trimpath -o target/alert ./cmd/alert/main.go
+TARGET_ARCH=$(go env GOARCH)
+
+echo "Building for GOOS=linux GOARCH=$TARGET_ARCH"
+GOOS=linux GOARCH=$TARGET_ARCH go build -ldflags="-s -w" -trimpath -o target/alert ./cmd/alert/main.go
 
 # Check for --install argument
 if [ "$1" = "--install" ]; then
